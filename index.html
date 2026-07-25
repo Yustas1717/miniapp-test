@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Оформление заказа</title>
+
+<!-- Telegram Web App SDK — даёт доступ к Telegram.WebApp (тема, sendData, MainButton и т.д.) -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+  /*
+    Цвета берутся из CSS-переменных Telegram (устанавливаются в JS-блоке ниже
+    через Telegram.WebApp.themeParams), поэтому страница автоматически
+    подстраивается под светлую/тёмную тему пользователя.
+    Значения по умолчанию — на случай открытия страницы вне Telegram
+    (для локальной проверки в обычном браузере).
+  */
+  :root {
+    --tg-bg: #ffffff;
+    --tg-text: #1c1c1e;
+    --tg-hint: #8e8e93;
+    --tg-button: #2481cc;
+    --tg-button-text: #ffffff;
+    --tg-secondary-bg: #f2f2f7;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--tg-bg);
+    color: var(--tg-text);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  .card {
+    background: var(--tg-secondary-bg);
+    border-radius: 20px;
+    padding: 24px 20px;
+    margin-top: 16px;
+    text-align: center;
+  }
+
+  .product-icon {
+    font-size: 56px;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .product-name {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  .product-price {
+    font-size: 15px;
+    color: var(--tg-hint);
+    margin: 0 0 20px;
+  }
+
+  .counter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .counter-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background: var(--tg-button);
+    color: var(--tg-button-text);
+    font-size: 24px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s ease;
+  }
+
+  .counter-btn:active {
+    transform: scale(0.92);
+  }
+
+  .counter-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .counter-value {
+    min-width: 48px;
+    font-size: 28px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    transition: transform 0.12s ease;
+  }
+
+  .counter-value.pulse {
+    transform: scale(1.15);
+  }
+
+  .summary {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(142, 142, 147, 0.25);
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+    color: var(--tg-hint);
+  }
+
+  .summary strong {
+    color: var(--tg-text);
+    font-size: 17px;
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  .order-button {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 14px;
+    background: var(--tg-button);
+    color: var(--tg-button-text);
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s ease, opacity 0.15s ease;
+  }
+
+  .order-button:active {
+    transform: scale(0.98);
+  }
+
+  .order-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .hint {
+    text-align: center;
+    color: var(--tg-hint);
+    font-size: 13px;
+    margin-top: 10px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .counter-btn, .counter-value, .order-button {
+      transition: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="product-icon">☕️</div>
+    <p class="product-name">Кофе навынос</p>
+    <p class="product-price">25 000 сум / шт.</p>
+
+    <div class="counter">
+      <button class="counter-btn" id="decreaseBtn" aria-label="Уменьшить количество">–</button>
+      <span class="counter-value" id="countValue">1</span>
+      <button class="counter-btn" id="increaseBtn" aria-label="Увеличить количество">+</button>
+    </div>
+
+    <div class="summary">
+      <span>Итого</span>
+      <strong id="totalValue">25 000 сум</strong>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <button class="order-button" id="orderBtn">Оформить заказ</button>
+  <p class="hint">Данные будут переданы боту в Telegram</p>
+
+<script>
+  // --------------------------------------------------------------------
+  // Инициализация Telegram Web App
+  // --------------------------------------------------------------------
+  const tg = window.Telegram?.WebApp;
+
+  if (tg) {
+    tg.ready();   // сообщаем Telegram, что страница готова к показу
+    tg.expand();  // разворачиваем Mini App на всю доступную высоту
+
+    // Подставляем цвета текущей темы Telegram в CSS-переменные,
+    // чтобы страница выглядела нативно и в светлой, и в тёмной теме.
+    const applyThemeColors = () => {
+      const params = tg.themeParams || {};
+      const root = document.documentElement.style;
+
+      if (params.bg_color) root.setProperty('--tg-bg', params.bg_color);
+      if (params.text_color) root.setProperty('--tg-text', params.text_color);
+      if (params.hint_color) root.setProperty('--tg-hint', params.hint_color);
+      if (params.button_color) root.setProperty('--tg-button', params.button_color);
+      if (params.button_text_color) root.setProperty('--tg-button-text', params.button_text_color);
+      if (params.secondary_bg_color) root.setProperty('--tg-secondary-bg', params.secondary_bg_color);
+    };
+
+    applyThemeColors();
+    tg.onEvent('themeChanged', applyThemeColors);
+  }
+
+  // --------------------------------------------------------------------
+  // Логика счётчика товара
+  // --------------------------------------------------------------------
+  const PRICE_PER_ITEM = 25000; // сум
+  const MIN_COUNT = 1;
+  const MAX_COUNT = 20;
+
+  let count = MIN_COUNT;
+
+  const countEl = document.getElementById('countValue');
+  const totalEl = document.getElementById('totalValue');
+  const decreaseBtn = document.getElementById('decreaseBtn');
+  const increaseBtn = document.getElementById('increaseBtn');
+  const orderBtn = document.getElementById('orderBtn');
+
+  function formatSum(value) {
+    // Разбиваем число на разряды пробелом: 125000 -> "125 000"
+    return value.toLocaleString('ru-RU') + ' сум';
+  }
+
+  function render() {
+    countEl.textContent = count;
+    totalEl.textContent = formatSum(count * PRICE_PER_ITEM);
+
+    decreaseBtn.disabled = count <= MIN_COUNT;
+    increaseBtn.disabled = count >= MAX_COUNT;
+
+    // Небольшая анимация "пульса" при изменении значения
+    countEl.classList.remove('pulse');
+    // reflow нужен, чтобы анимация перезапустилась при быстром повторном клике
+    void countEl.offsetWidth;
+    countEl.classList.add('pulse');
+  }
+
+  decreaseBtn.addEventListener('click', () => {
+    if (count > MIN_COUNT) {
+      count -= 1;
+      render();
+      tg?.HapticFeedback?.impactOccurred('light');
+    }
+  });
+
+  increaseBtn.addEventListener('click', () => {
+    if (count < MAX_COUNT) {
+      count += 1;
+      render();
+      tg?.HapticFeedback?.impactOccurred('light');
+    }
+  });
+
+  // --------------------------------------------------------------------
+  // Отправка заказа обратно в бота
+  // --------------------------------------------------------------------
+  orderBtn.addEventListener('click', () => {
+    const orderData = {
+      count: count,
+      total: count * PRICE_PER_ITEM,
+    };
+
+    if (!tg) {
+      // Страница открыта вне Telegram (например, локально в браузере
+      // при разработке) — sendData недоступен, просто покажем данные.
+      alert('Telegram.WebApp недоступен (страница открыта не в Telegram).\n' +
+            'Данные заказа: ' + JSON.stringify(orderData));
+      return;
+    }
+
+    orderBtn.disabled = true;
+    orderBtn.textContent = 'Отправляем...';
+
+    // sendData отправляет JSON-строку боту и сама закрывает Mini App —
+    // бот получит это в апдейте message.web_app_data
+    tg.sendData(JSON.stringify(orderData));
+  });
+
+  render();
+</script>
+
+</body>
+</html>
