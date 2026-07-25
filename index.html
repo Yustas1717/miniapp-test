@@ -4,11 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Кофейня Mini App</title>
-    <!-- Подключаем официальный скрипт Telegram Web App -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--tg-theme-bg-color, #ffffff);
             color: var(--tg-theme-text-color, #222222);
             margin: 0;
@@ -27,23 +26,6 @@
             text-align: center;
             width: 100%;
             max-width: 320px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        h2 {
-            margin-top: 0;
-            font-size: 22px;
-        }
-        .price {
-            font-size: 16px;
-            color: var(--tg-theme-hint-color, #888888);
-            margin-bottom: 20px;
-        }
-        .counter {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
         }
         button.circle-btn {
             background-color: var(--tg-theme-button-color, #2481cc);
@@ -58,11 +40,7 @@
         span#count {
             font-size: 20px;
             font-weight: bold;
-        }
-        .total {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 20px;
+            margin: 0 15px;
         }
         button.submit-btn {
             background-color: var(--tg-theme-button-color, #2481cc);
@@ -74,6 +52,7 @@
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
+            margin-top: 20px;
         }
     </style>
 </head>
@@ -81,22 +60,22 @@
 
     <div class="card">
         <h2>☕ Кофе навынос</h2>
-        <div class="price">25 000 сум / шт.</div>
-        
-        <div class="counter">
+        <div>25 000 сум / шт.</div>
+        <br>
+        <div>
             <button class="circle-btn" onclick="changeCount(-1)">-</button>
             <span id="count">1</span>
             <button class="circle-btn" onclick="changeCount(1)">+</button>
         </div>
-
-        <div class="total" id="total">Итого: 25 000 сум</div>
+        <br>
+        <div id="total" style="font-weight: bold;">Итого: 25 000 сум</div>
 
         <button class="submit-btn" onclick="checkout()">Оформить заказ</button>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на весь экран
+        tg.expand();
 
         let count = 1;
         const pricePerItem = 25000;
@@ -104,23 +83,19 @@
         function changeCount(delta) {
             count += delta;
             if (count < 1) count = 1;
-            
             document.getElementById('count').innerText = count;
             document.getElementById('total').innerText = 'Итого: ' + (count * pricePerItem).toLocaleString() + ' сум';
         }
 
         function checkout() {
-            // Формируем данные заказа
             const orderData = JSON.stringify({
                 product: "Кофе навынос",
                 quantity: count,
-                total_price: count * pricePerItem + " сум"
+                total_price: (count * pricePerItem) + " сум"
             });
 
-            // 1. Отправляем данные в бота
+            // Отправка данных боту и закрытие приложения
             tg.sendData(orderData);
-
-            // 2. Закрываем Mini App
             tg.close();
         }
     </script>
