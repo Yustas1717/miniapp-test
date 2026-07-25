@@ -206,8 +206,7 @@
     tg.ready();   // сообщаем Telegram, что страница готова к показу
     tg.expand();  // разворачиваем Mini App на всю доступную высоту
 
-    // Подставляем цвета текущей темы Telegram в CSS-переменные,
-    // чтобы страница выглядела нативно и в светлой, и в тёмной теме.
+    // Подставляем цвета текущей темы Telegram в CSS-переменные
     const applyThemeColors = () => {
       const params = tg.themeParams || {};
       const root = document.documentElement.style;
@@ -240,7 +239,6 @@
   const orderBtn = document.getElementById('orderBtn');
 
   function formatSum(value) {
-    // Разбиваем число на разряды пробелом: 125000 -> "125 000"
     return value.toLocaleString('ru-RU') + ' сум';
   }
 
@@ -251,9 +249,7 @@
     decreaseBtn.disabled = count <= MIN_COUNT;
     increaseBtn.disabled = count >= MAX_COUNT;
 
-    // Небольшая анимация "пульса" при изменении значения
     countEl.classList.remove('pulse');
-    // reflow нужен, чтобы анимация перезапустилась при быстром повторном клике
     void countEl.offsetWidth;
     countEl.classList.add('pulse');
   }
@@ -275,7 +271,7 @@
   });
 
   // --------------------------------------------------------------------
-  // Отправка заказа обратно в бота
+  // Отправка заказа обратно в бота (мгновенная)
   // --------------------------------------------------------------------
   orderBtn.addEventListener('click', () => {
     const orderData = {
@@ -284,19 +280,14 @@
     };
 
     if (!tg) {
-      // Страница открыта вне Telegram (например, локально в браузере
-      // при разработке) — sendData недоступен, просто покажем данные.
       alert('Telegram.WebApp недоступен (страница открыта не в Telegram).\n' +
             'Данные заказа: ' + JSON.stringify(orderData));
       return;
     }
 
-    orderBtn.disabled = true;
-    orderBtn.textContent = 'Отправляем...';
-
-    // sendData отправляет JSON-строку боту и сама закрывает Mini App —
-    // бот получит это в апдейте message.web_app_data
+    // Мгновенно отправляем данные и сразу закрываем Mini App
     tg.sendData(JSON.stringify(orderData));
+    tg.close();
   });
 
   render();
